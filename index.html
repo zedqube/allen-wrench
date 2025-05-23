@@ -64,7 +64,6 @@
 
         // Script for dynamically loading articles
         document.addEventListener('DOMContentLoaded', async function () {
-            const articleFiles = ['main.md', 'cool.md', 'feature.md'];
             const contentContainer = document.getElementById('content');
 
             // Function to setup event listeners for articles (modified from original)
@@ -113,101 +112,128 @@
                 return;
             }
 
-            for (const filename of articleFiles) {
-                try {
-                    const response = await fetch(filename);
-                    if (!response.ok) {
-                        console.error(`Error fetching ${filename}: ${response.statusText}`);
-                        const errorArticle = document.createElement('article');
-                        errorArticle.className = "bg-white p-6 sm:p-8 rounded-xl shadow-lg text-red-500";
-                        errorArticle.innerHTML = `<p>Could not load article: ${filename}</p>`;
-                        contentContainer.appendChild(errorArticle);
-                        continue;
-                    }
-                    const rawMarkdown = await response.text();
-                    const lines = rawMarkdown.split('\n'); // Corrected: Use actual newline character for splitting
-                    
-                    // More robust metadata parsing
-                    const title = lines[0] && lines[0].trim() !== "---" ? lines[0].trim() : 'Untitled Article';
-                    const date = lines[1] && lines[1].trim() !== "---" ? lines[1].trim() : 'Unknown Date';
-                    let bodyStartIndex = 2;
-                    if (lines[0] && lines[0].startsWith("---")) bodyStartIndex = 1; // Adjust if --- is on the first line (e.g. frontmatter start)
-                    // Ensure bodyStartIndex is within bounds before accessing lines[bodyStartIndex]
-                    if (lines.length > bodyStartIndex && lines[bodyStartIndex] && lines[bodyStartIndex].startsWith("---")) bodyStartIndex++; // Skip --- if present after title/date
-                    
-                    let bodyContent = lines.slice(bodyStartIndex).join('\n'); // Corrected: Join with actual newline
-
-                    let mainContentMarkdown = bodyContent;
-                    let collapsibleContentMarkdown = "";
-                    let hasCollapsibleContent = false;
-
-                    const moreSeparator = '---MORE---';
-                    const moreIndex = bodyContent.indexOf(moreSeparator);
-
-                    if (moreIndex !== -1) {
-                        mainContentMarkdown = bodyContent.substring(0, moreIndex).trim();
-                        collapsibleContentMarkdown = bodyContent.substring(moreIndex + moreSeparator.length).trim();
-                        hasCollapsibleContent = true;
-                    }
-                    
-                    // Ensure marked is available
-                    if (typeof marked === 'undefined' || typeof marked.parse === 'undefined') {
-                        console.error("marked.js library is not loaded or not found.");
-                        // Display error in UI for this article
-                        const errorArticle = document.createElement('article');
-                        errorArticle.className = "bg-white p-6 sm:p-8 rounded-xl shadow-lg text-red-500";
-                        errorArticle.innerHTML = `<p>Error: Markdown parser (marked.js) not available. Cannot render ${filename}.</p>`;
-                        contentContainer.appendChild(errorArticle);
-                        continue; // Skip this article
-                    }
-
-                    const mainHtml = marked.parse(mainContentMarkdown);
-                    const collapsibleHtml = hasCollapsibleContent ? marked.parse(collapsibleContentMarkdown) : "";
-
-                    const articleElement = document.createElement('article');
-                    articleElement.className = "bg-white p-6 sm:p-8 rounded-xl shadow-lg hover:shadow-xl transition-all-ease";
-                    
-                    let articleInnerHTML = `
-                        <header>
-                            <h2 class="text-2xl sm:text-3xl font-semibold text-slate-900 mb-2">
-                                <a class="article-title-link hover:text-sky-600 transition-all-ease cursor-pointer">
-                                    ${title}
-                                </a>
-                            </h2>
-                            <p class="text-xs sm:text-sm text-slate-500 mb-4">
-                                Published on ${date}
-                            </p>
-                        </header>
-                        <div class="prose prose-slate max-w-none prose-p:text-slate-700 prose-headings:text-slate-800 prose-a:text-sky-600 hover:prose-a:text-sky-700">
-                            ${mainHtml}`;
-                    
-                    if (hasCollapsibleContent) {
-                        articleInnerHTML += `
-                            <div class="collapsible-content hidden">
-                                ${collapsibleHtml}
-                            </div>
-                            <button class="toggle-content-btn text-sky-600 hover:text-sky-700 font-semibold mt-4 focus:outline-none">
-                                Read more &rarr;
-                            </button>`;
-                    }
-                    
-                    articleInnerHTML += `</div>`; // Close prose div
-                    articleElement.innerHTML = articleInnerHTML;
-                    contentContainer.appendChild(articleElement);
-
-                } catch (error) {
-                    console.error(`Error processing ${filename}:`, error);
-                    const errorArticle = document.createElement('article');
-                    errorArticle.className = "bg-white p-6 sm:p-8 rounded-xl shadow-lg text-red-500";
-                    errorArticle.innerHTML = `<p>Could not load or parse article: ${filename}</p><p><small>${error.message}</small></p>`;
-                    contentContainer.appendChild(errorArticle);
+            try {
+                const articlesResponse = await fetch('articles.json');
+                if (!articlesResponse.ok) {
+                    throw new Error(`Failed to fetch articles.json: ${articlesResponse.statusText}`);
                 }
-            }
-            
-            // After all articles are loaded, setup interactivity using event delegation.
-            // The original DOMContentLoaded listener for interactivity is now effectively replaced by this.
-            if (articleFiles.length > 0) {
-                 setupArticleInteractivity(contentContainer);
+                let articles = await articlesResponse.json();
+
+                // Sort articles by date (newest first)
+                articles.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+                let articlesProcessed = 0; // Counter for processed articles
+
+                if (articles.length === 0) {
+                    setupArticleInteractivity(contentContainer); // Call even if no articles, to ensure listeners are there if any static content was planned
+                }
+
+                for (const article of articles) {
+                    const filename = article.filename;
+                    const title = article.title;
+                    // Format date for display
+                    const displayDate = new Date(article.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+                    try {
+                        const response = await fetch(filename);
+                        if (!response.ok) {
+                            console.error(`Error fetching ${filename}: ${response.statusText}`);
+                            const errorArticleEl = document.createElement('article');
+                            errorArticleEl.className = "bg-white p-6 sm:p-8 rounded-xl shadow-lg text-red-500";
+                            errorArticleEl.innerHTML = `<p>Could not load article: ${filename}</p>`;
+                            contentContainer.appendChild(errorArticleEl);
+                            articlesProcessed++;
+                            if (articlesProcessed === articles.length) {
+                                setupArticleInteractivity(contentContainer);
+                            }
+                            continue;
+                        }
+                        const rawMarkdown = await response.text();
+                        // Content after metadata (title, date) is now entirely markdown body
+                        // The title and date are taken directly from articles.json
+                        // So, we don't need to parse them from rawMarkdown's first lines.
+                        // The full rawMarkdown IS the bodyContent here.
+                        let bodyContent = rawMarkdown;
+                        
+                        let mainContentMarkdown = bodyContent;
+                        let collapsibleContentMarkdown = "";
+                        let hasCollapsibleContent = false;
+
+                        const moreSeparator = '---MORE---';
+                        const moreIndex = bodyContent.indexOf(moreSeparator);
+
+                        if (moreIndex !== -1) {
+                            mainContentMarkdown = bodyContent.substring(0, moreIndex).trim();
+                            collapsibleContentMarkdown = bodyContent.substring(moreIndex + moreSeparator.length).trim();
+                            hasCollapsibleContent = true;
+                        }
+                        
+                        // Ensure marked is available
+                        if (typeof marked === 'undefined' || typeof marked.parse === 'undefined') {
+                            console.error("marked.js library is not loaded or not found.");
+                            const errorArticleEl = document.createElement('article');
+                            errorArticleEl.className = "bg-white p-6 sm:p-8 rounded-xl shadow-lg text-red-500";
+                            errorArticleEl.innerHTML = `<p>Error: Markdown parser (marked.js) not available. Cannot render ${filename}.</p>`;
+                            contentContainer.appendChild(errorArticleEl);
+                            articlesProcessed++;
+                            if (articlesProcessed === articles.length) {
+                                setupArticleInteractivity(contentContainer);
+                            }
+                            continue; 
+                        }
+
+                        const mainHtml = marked.parse(mainContentMarkdown);
+                        const collapsibleHtml = hasCollapsibleContent ? marked.parse(collapsibleContentMarkdown) : "";
+
+                        const articleElement = document.createElement('article');
+                        articleElement.className = "bg-white p-6 sm:p-8 rounded-xl shadow-lg hover:shadow-xl transition-all-ease";
+                        
+                        let articleInnerHTML = `
+                            <header>
+                                <h2 class="text-2xl sm:text-3xl font-semibold text-slate-900 mb-2">
+                                    <a class="article-title-link hover:text-sky-600 transition-all-ease cursor-pointer">
+                                        ${title} 
+                                    </a>
+                                </h2>
+                                <p class="text-xs sm:text-sm text-slate-500 mb-4">
+                                    Published on ${displayDate} 
+                                </p>
+                            </header>
+                            <div class="prose prose-slate max-w-none prose-p:text-slate-700 prose-headings:text-slate-800 prose-a:text-sky-600 hover:prose-a:text-sky-700">
+                                ${mainHtml}`;
+                        
+                        if (hasCollapsibleContent) {
+                            articleInnerHTML += `
+                                <div class="collapsible-content hidden">
+                                    ${collapsibleHtml}
+                                </div>
+                                <button class="toggle-content-btn text-sky-600 hover:text-sky-700 font-semibold mt-4 focus:outline-none">
+                                    Read more &rarr;
+                                </button>`;
+                        }
+                        
+                        articleInnerHTML += `</div>`; // Close prose div
+                        articleElement.innerHTML = articleInnerHTML;
+                        contentContainer.appendChild(articleElement);
+
+                    } catch (error) {
+                        console.error(`Error processing markdown for ${filename}:`, error);
+                        const errorArticleEl = document.createElement('article');
+                        errorArticleEl.className = "bg-white p-6 sm:p-8 rounded-xl shadow-lg text-red-500";
+                        errorArticleEl.innerHTML = `<p>Could not load or parse article content for: ${filename}</p><p><small>${error.message}</small></p>`;
+                        contentContainer.appendChild(errorArticleEl);
+                    } finally {
+                        articlesProcessed++;
+                        if (articlesProcessed === articles.length) {
+                            setupArticleInteractivity(contentContainer);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error('Error loading or processing articles.json:', error);
+                if (contentContainer) {
+                    contentContainer.innerHTML = '<p class="text-red-500">Error loading articles. Please check the console for details or try refreshing the page.</p>';
+                }
             }
         });
     </script>

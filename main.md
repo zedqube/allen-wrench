@@ -1,5 +1,3 @@
-Main File Showcase
-October 26, 2023
 This is the initial content of the main file.
 It demonstrates the basic article structure.
 ---MORE---

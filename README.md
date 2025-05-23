@@ -1,29 +1,3 @@
-
-# Default
-
-## Content Management
-
-This site loads articles dynamically from Markdown files listed in `articles.json`.
-
-### Adding a New Article
-1.  Create a new `.md` file in the root directory (e.g., `my-new-article.md`).
-2.  Write your article content in Markdown format. You can use `---MORE---` as a separator if you want a "Read more" fold. Content before the separator will be immediately visible; content after will be in the collapsible section.
-3.  Add an entry for your new article in `articles.json`. This JSON file lists all articles to be displayed. Each entry needs a `filename`, `title`, and `date` (YYYY-MM-DD). For example:
-    ```json
-    {
-      "filename": "my-new-article.md",
-      "title": "My Awesome New Article",
-      "date": "YYYY-MM-DD"
-    }
-    ```
-4.  Ensure your new entry in `articles.json` is placed appropriately if you want chronological order (the script sorts by date, newest first, but maintaining order in the JSON file itself is good practice).
-
-### Archiving an Old Article
-To archive an article and remove it from the main page:
-1.  Move the corresponding `.md` file from the root directory to the `archive/` directory.
-2.  Remove its entry from the `articles.json` file.
-Archived articles are not currently displayed anywhere on the site but are kept in the `archive/` directory for historical purposes.
-
 # Chronicles of a Curious Mind - A Personal Blog
 
 This project is a simple, elegant personal blog website titled "Chronicles of a Curious Mind." It's designed to share thoughts and explorations on technology, design, and the spaces in between. The site features a clean, responsive layout with interactive elements.
@@ -52,6 +26,29 @@ This project is a simple, elegant personal blog website titled "Chronicles of a 
 ## How to View
 
 Simply open the `index.html` file in your web browser to view the blog. No special build steps or server setup is required.
+
+## Content Management
+
+This site loads articles dynamically from Markdown files listed in `articles.json`.
+
+### Adding a New Article
+1.  Create a new `.md` file in the root directory (e.g., `my-new-article.md`).
+2.  Write your article content in Markdown format. You can use `---MORE---` as a separator if you want a "Read more" fold. Content before the separator will be immediately visible; content after will be in the collapsible section.
+3.  Add an entry for your new article in `articles.json`. This JSON file lists all articles to be displayed. Each entry needs a `filename`, `title`, and `date` (YYYY-MM-DD). For example:
+    ```json
+    {
+      "filename": "my-new-article.md",
+      "title": "My Awesome New Article",
+      "date": "YYYY-MM-DD"
+    }
+    ```
+4.  Ensure your new entry in `articles.json` is placed appropriately if you want chronological order (the script sorts by date, newest first, but maintaining order in the JSON file itself is good practice).
+
+### Archiving an Old Article
+To archive an article and remove it from the main page:
+1.  Move the corresponding `.md` file from the root directory to the `archive/` directory.
+2.  Remove its entry from the `articles.json` file.
+Archived articles are not currently displayed anywhere on the site but are kept in the `archive/` directory for historical purposes.
 
 ## Potential Future Enhancements
 
